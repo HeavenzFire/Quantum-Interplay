@@ -17,10 +17,28 @@ jobs:
           cache: pip
       - run: python -m pip install -r requirements.txt
       - run: python experiments/phase_batch8_tight_binding.py
-      - name: Upload generated report and trajectories
+      - name: Upload Batch 8 artifacts
         uses: actions/upload-artifact@v4
         with:
           name: batch8-results
           path: |
             experiments/phase-batch8-tight-binding-report.json
             experiments/phase-batch8-tight-binding-trajectories.csv
+
+  batch9:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - run: python experiments/phase_batch9_disorder_robustness.py
+      - name: Upload Batch 9 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: batch9-results
+          path: |
+            experiments/phase-batch9-disorder-robustness-report.json
+            experiments/phase-batch9-disorder-robustness-replicates.csv
