@@ -1,0 +1,53 @@
+{
+  "title": "HeavenzFire Batch 8 - gyroid-inspired tight-binding toy model",
+  "status": "PASS",
+  "checks_passed": 9,
+  "checks_total": 9,
+  "seed": 20261017,
+  "grid": [
+    4,
+    4,
+    4
+  ],
+  "nodes": 64,
+  "undirected_edges": 192,
+  "boundary_conditions": "periodic",
+  "model": "single-particle tight-binding Hamiltonian with real symmetric nearest-neighbour hopping",
+  "gyroid_weight_rule": "w_e = 1 + alpha*tanh(g(midpoint)), alpha=0.35",
+  "time_points": 321,
+  "simulation": "Classical CPU eigendecomposition; psi(t)=exp(-iHt)psi(0), hbar=1",
+  "results": {
+    "uniform_cubic": {
+      "spectral_bandwidth": 12,
+      "peak_target_probability": 0.9999048838178579,
+      "peak_time": 7.85,
+      "max_norm_error": 6.661338147750939e-16
+    },
+    "gyroid_modulated": {
+      "spectral_bandwidth": 12.565859600701078,
+      "peak_target_probability": 0.7262828554945122,
+      "peak_time": 1.525,
+      "max_norm_error": 2.886579864025407e-14
+    },
+    "shuffled_weight_control": {
+      "spectral_bandwidth": 12.099056232637725,
+      "peak_target_probability": 0.7130671013080733,
+      "peak_time": 1.475,
+      "max_norm_error": 8.326672684688674e-15
+    }
+  },
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Windows 11 build 26120",
+    "numpy": "1.26.4",
+    "scipy": "1.13.1"
+  },
+  "interpretation": "The result is model-specific. Gyroid-modulated hopping had a slightly higher peak target probability than the shuffled-weight control in this run, but lower than the uniform cubic model. Peak times differ.",
+  "limitations": [
+    "Toy gyroid-inspired hopping modulation, not an atomistic gyroid material.",
+    "Closed single-particle system; no leads, disorder ensemble, interactions, or device noise.",
+    "Does not establish quantum advantage, topological protection, or real-device performance.",
+    "Classical CPU simulation; no physical quantum hardware used."
+  ],
+  "provenance": "Captured from the Windows ZDH execution output for Batch 8 on 2026-10-17. See experiment source for the reproducible computation."
+}
