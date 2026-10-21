@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { runUnifiedField, buildUnifiedFieldPlan } = require('./unified-field.cjs');
+const { invokeWorkerProcess } = require('./worker-process.cjs');
 
 const goal = process.argv[2];
 const INFERENCE_URL = process.env.HF_UNIFIED_FIELD_INFERENCE_URL || 'http://127.0.0.1:11800';
@@ -17,28 +18,19 @@ if (!Number.isInteger(maxParallel) || maxParallel < 1 || maxParallel > 4) throw 
 if (!Number.isInteger(maxTokens) || maxTokens < 16 || maxTokens > 128) throw new RangeError('maxTokens must be an integer from 16 through 128');
 
 async function invokeLocalRuntime(_adapterId, task) {
-  const started = Date.now();
-  const response = await fetch(INFERENCE_URL + '/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  return invokeWorkerProcess({
+    workerPath: path.join(__dirname, 'local-model-worker.cjs'),
+    input: {
+      endpoint: INFERENCE_URL,
       model: task.model || model,
-      messages: [{ role: 'user', content: task.prompt }],
-      stream: false,
-      max_tokens: Math.min(Number(task.numPredict) || maxTokens, maxTokens),
-      temperature: 0.2
-    }),
-    signal: AbortSignal.timeout(Math.min(Number(task.timeoutMs) || 90000, 120000))
+      prompt: task.prompt,
+      maxTokens: Math.min(Number(task.numPredict) || maxTokens, maxTokens),
+      temperature: 0.2,
+      timeoutMs: task.timeoutMs || 90000
+    },
+    timeoutMs: Math.min(Number(task.timeoutMs) || 90000, 120000),
+    maxOutputBytes: 1024 * 1024
   });
-  const data = await response.json().catch(() => ({}));
-  const choice = data.choices && data.choices[0];
-  const output = choice && choice.message && choice.message.content;
-  if (!response.ok) {
-    const detail = data.error && typeof data.error.message === 'string' ? data.error.message : data.error ? JSON.stringify(data.error) : 'no provider error detail';
-    throw new Error('Primary local inference returned HTTP ' + response.status + ': ' + String(detail).slice(0, 500));
-  }
-  if (typeof output !== 'string') throw new Error('Primary local inference response missing text');
-  return { adapter: 'unified-local-runtime', model: data.model || model, response: output, finishReason: choice.finish_reason || 'unknown', durationMs: Date.now() - started };
 }
 
 (async () => {
@@ -64,12 +56,31 @@ async function invokeLocalRuntime(_adapterId, task) {
   const { integrity, ...storedBody } = stored;
   const verifiedDigest = crypto.createHash('sha256').update(JSON.stringify(storedBody)).digest('hex');
   if (!integrity || integrity.digest !== verifiedDigest) throw new Error('Persisted report integrity check failed');
+
+  const workerResults = result.results
+    ? ['architecture', 'implementation', 'security', 'verification', 'synthesis'].map((key) => result.results[key]).filter(Boolean)
+    : [];
+  const workerPids = workerResults.map((entry) => entry.workerPid).filter(Number.isInteger);
   process.stdout.write(JSON.stringify({
-    ok: result.ok, status: result.status || 'planned', executionStarted: result.executionStarted,
-    model, maxParallel, maxTokens, laneCount: result.plan.lanes.length, nodeCount: result.plan.decomposition.nodeCount,
+    ok: result.ok,
+    status: result.status || 'planned',
+    executionStarted: result.executionStarted,
+    model,
+    maxParallel,
+    maxTokens,
+    laneCount: result.plan.lanes.length,
+    nodeCount: result.plan.decomposition.nodeCount,
     stageCount: result.trace ? result.trace.filter(e => e.type === 'stage.completed').length : 0,
-    safety: result.safety || null, qualityGate: result.qualityGate || null,
-    integrity: { algorithm: 'sha256', verified: true, digest }, snapshotPath, reportPath: latestPath
+    workerPids,
+    uniqueWorkerPidCount: new Set(workerPids).size,
+    safety: result.safety || null,
+    qualityGate: result.qualityGate || null,
+    integrity: { algorithm: 'sha256', verified: true, digest },
+    snapshotPath,
+    reportPath: latestPath
   }, null, 2) + '\n');
   if (result.ok === false) process.exitCode = 2;
-})().catch((error) => { process.stderr.write(String(error && error.stack || error) + '\n'); process.exitCode = 1; });
+})().catch((error) => {
+  process.stderr.write(String(error && error.stack || error) + '\n');
+  process.exitCode = 1;
+});
