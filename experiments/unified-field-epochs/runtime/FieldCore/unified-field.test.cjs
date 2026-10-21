@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -85,7 +85,7 @@ test('rejects truncated lane output even when the model returned text', async ()
     goal: 'Review a bounded integration plan',
     invokeAdapter: async (_adapter, task) => ({
       response: 'A non-empty but incomplete answer',
-      finishReason: task.prompt.includes('Integrate the four lane notes') ? 'stop' : 'length'
+      finishReason: task.prompt.includes('Write one concise action sentence') ? 'stop' : 'length'
     })
   });
   assert.equal(result.pipelineOk, true);
@@ -100,7 +100,7 @@ test('rejects truncated synthesis output', async () => {
     goal: 'Review a bounded integration plan',
     invokeAdapter: async (_adapter, task) => ({
       response: 'A non-empty answer',
-      finishReason: task.prompt.includes('Integrate the four lane notes') ? 'length' : 'stop'
+      finishReason: task.prompt.includes('Write one concise action sentence') ? 'length' : 'stop'
     })
   });
   assert.equal(result.pipelineOk, true);
@@ -110,10 +110,26 @@ test('rejects truncated synthesis output', async () => {
   assert.equal(result.qualityGate.synthesisTruncated, true);
 });
 
+test('rejects refusal in synthesis even when all four lanes return usable output', async () => {
+  const result = await runUnifiedField({
+    goal: 'Review a bounded integration plan',
+    invokeAdapter: async (_adapter, task) => ({
+      response: task.prompt.includes('Write one concise action sentence')
+        ? "I can't assist with integrating four lane notes."
+        : 'Concrete assessment and a falsifiable test.',
+      finishReason: 'stop'
+    })
+  });
+  assert.equal(result.pipelineOk, true);
+  assert.equal(result.qualityGate.synthesisRefusal, true);
+  assert.equal(result.qualityGate.synthesisRejected, true);
+  assert.equal(result.ok, false);
+  assert.equal(result.status, 'review_required');
+});
+
 test('rejects invalid concurrency and oversized goals', async () => {
   assert.throws(() => buildUnifiedFieldPlan('x'.repeat(12001)), /12000/);
   await assert.rejects(() => runUnifiedField({
     goal: 'test', maxParallel: 5, invokeAdapter: async () => ({ response: 'no', finishReason: 'stop' })
   }), /maxParallel/);
 });
-

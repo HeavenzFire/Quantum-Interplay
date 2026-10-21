@@ -20,6 +20,10 @@ function validateGoal(goal) {
   return goal.trim();
 }
 
+function isRefusal(text) {
+  return /^(i can(?:not|'t) fulfill this request|i can(?:not|'t) help with (?:that|this request)|i'm sorry,? but i can(?:not|'t)|i can't assist with|i cannot assist with)/i.test(String(text || '').trim());
+}
+
 function buildUnifiedFieldPlan(goal, policy = {}) {
   const cleanGoal = validateGoal(goal);
   const decomposition = buildQuadruplePlan({
@@ -81,7 +85,7 @@ async function runUnifiedField({ goal, invokeAdapter, adapterId = 'ollama-local'
     agent: LANE_BINDINGS.synthesis,
     after: LANES.map((lane) => lane.id),
     includeDependencies: true,
-    prompt: 'Integrate the four lane notes. One sentence, maximum 30 words. State the next test and label unverified claims.'
+    prompt: 'Write one concise action sentence based on the four notes below. Maximum 30 words; include the next test and mark any unverified claim.'
   });
 
   const handlers = {};
@@ -94,7 +98,7 @@ async function runUnifiedField({ goal, invokeAdapter, adapterId = 'ollama-local'
           response: String(value && value.response || '').slice(0, 90),
           finishReason: value && value.finishReason || 'unknown'
         }));
-        prompt += '\nLane notes (length means incomplete):\n' + compactDependencies.join('\n');
+        prompt += '\nNotes:\n' + compactDependencies.join('\n');
       }
       const output = await invokeAdapter(adapterId, { prompt, model, timeoutMs: 90000 });
       return { ...output, agent: stage.agent, lane: stage.id };
@@ -110,25 +114,26 @@ async function runUnifiedField({ goal, invokeAdapter, adapterId = 'ollama-local'
   const rejectedLanes = LANES.filter((lane) => {
     const laneResult = result.results && result.results[lane.id];
     const text = String(laneResult && laneResult.response || '').trim();
-    const refusal = /^(i can(?:not|'t) fulfill this request|i can(?:not|'t) help with (?:that|this request)|i'm sorry,? but i can(?:not|'t))/i.test(text);
-    const truncated = laneResult && laneResult.finishReason === 'length';
-    return !text || refusal || truncated;
+    return !text || isRefusal(text) || (laneResult && laneResult.finishReason === 'length');
   }).map((lane) => lane.id);
   const truncatedLanes = LANES.filter((lane) => result.results && result.results[lane.id] && result.results[lane.id].finishReason === 'length').map((lane) => lane.id);
   const synthesisResult = result.results && result.results.synthesis;
+  const synthesisText = String(synthesisResult && synthesisResult.response || '').trim();
   const synthesisTruncated = Boolean(synthesisResult && synthesisResult.finishReason === 'length');
-  const synthesisRejected = !synthesisResult || !String(synthesisResult.response || '').trim() || synthesisTruncated;
+  const synthesisRefusal = isRefusal(synthesisText);
+  const synthesisRejected = !synthesisText || synthesisRefusal || synthesisTruncated;
   const qualityGate = {
     passed: result.ok && rejectedLanes.length === 0 && !synthesisRejected,
     rejectedLanes,
     truncatedLanes,
     synthesisRejected,
+    synthesisRefusal,
     synthesisTruncated,
-    policy: 'all-four-lanes-and-synthesis-must-return-usable-untruncated-output'
+    policy: 'all-four-lanes-and-synthesis-must-return-usable-non-refusal-untruncated-output'
   };
   const pipelineOk = result.ok;
   const ok = pipelineOk && qualityGate.passed;
   return { ...result, ok, pipelineOk, status: !pipelineOk ? 'failed' : qualityGate.passed ? 'completed' : 'review_required', qualityGate, executionStarted: true, plan, envelopeId: envelope.id, safety };
 }
 
-module.exports = { LANES, validateGoal, buildUnifiedFieldPlan, runUnifiedField };
+module.exports = { LANES, validateGoal, isRefusal, buildUnifiedFieldPlan, runUnifiedField };
