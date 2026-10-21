@@ -1,0 +1,25 @@
+﻿{
+  "schema": "heavenzfire.unified-field-epoch-evidence.v1",
+  "epoch": 2,
+  "status": "PASS_BOUNDED_PROCESS_WORKERS",
+  "recordedAt": "2026-10-21T22:49:46.081Z",
+  "runId": "9b3ea8b6-970c-4a9d-a584-fa3def5dddf9",
+  "model": "llama3.2:1b",
+  "inferenceEndpoint": "http://127.0.0.1:11434",
+  "maxParallel": 1,
+  "stageCount": 5,
+  "traceEvents": 12,
+  "workers": [
+    {"lane":"architecture","agentId":"K003","pid":21308,"exitCode":0,"finishReason":"stop"},
+    {"lane":"implementation","agentId":"K016","pid":36204,"exitCode":0,"finishReason":"stop"},
+    {"lane":"security","agentId":"K013","pid":29392,"exitCode":0,"finishReason":"stop"},
+    {"lane":"verification","agentId":"T007","pid":34156,"exitCode":0,"finishReason":"stop"},
+    {"lane":"synthesis","agentId":"K006","pid":10428,"exitCode":0,"finishReason":"stop"}
+  ],
+  "workerProcessVerification": {"workerCount":5,"uniquePidCount":5,"allExitCodesZero":true,"timeoutsBounded":true,"outputSizeBounded":true,"malformedJsonRejected":true},
+  "qualityGate": {"passed":true,"rejectedLanes":[],"truncatedLanes":[],"synthesisRejected":false,"synthesisRefusal":false,"synthesisTruncated":false},
+  "verification": {"reportIntegrity":true,"traceValid":true,"exitCode":0,"sha256Digest":"3e5a6e125dece117f1c3818ea788bae405c8ac822b1742905756ab7f79295f37"},
+  "tests": {"passed":21,"failed":0,"scope":"targeted deterministic regression suite"},
+  "limitations": ["Workers are distinct OS processes but share the same Windows user permissions.","No filesystem/network sandbox isolation, container boundary, or least-privilege token has been demonstrated.","All workers use one local model backend sequentially; this is not four distinct models.","This is not evidence that another ChatGPT instance participated."],
+  "nextGate": "Implement and test lease fencing, idempotent delivery, durable recovery, explicit worker filesystem scope, and teardown evidence."
+}
