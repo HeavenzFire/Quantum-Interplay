@@ -8,10 +8,10 @@ const { LANE_BINDINGS } = require('./seraphim-777.cjs');
 const { createTaskRecord } = require('./shared-task-contract.cjs');
 
 const LANES = Object.freeze([
-  { id: 'architecture', title: 'Architecture', instruction: 'Name key boundaries, dependencies, interfaces, and integration order.' },
-  { id: 'implementation', title: 'Implementation', instruction: 'Name the smallest code change and measurable acceptance checks.' },
-  { id: 'security', title: 'Security', instruction: 'Name the main trust boundary, failure mode, and permission check.' },
-  { id: 'verification', title: 'Verification', instruction: 'Name falsifiable tests and evidence required for a pass.' }
+  { id: 'architecture', title: 'Architecture', instruction: 'Name the main boundary, dependency, and interface.' },
+  { id: 'implementation', title: 'Implementation', instruction: 'Name one minimal change and one acceptance test.' },
+  { id: 'security', title: 'Security', instruction: 'Name one trust boundary and one denial test.' },
+  { id: 'verification', title: 'Verification', instruction: 'Name one falsifiable test and its pass condition.' }
 ]);
 
 function validateGoal(goal) {
@@ -73,8 +73,7 @@ async function runUnifiedField({ goal, invokeAdapter, adapterId = 'ollama-local'
     agent: LANE_BINDINGS[lane.id],
     after: [],
     prompt: 'HF lane=' + lane.title + '. ' + lane.instruction +
-      '\nReturn 2-3 terse bullet points only, maximum 35 words total. No preamble. ' +
-      'Goal: ' + redaction.text
+      '\nAnswer in one sentence, maximum 18 words. No preamble. Goal: ' + redaction.text
   }));
   stages.push({
     id: 'synthesis',
@@ -82,7 +81,7 @@ async function runUnifiedField({ goal, invokeAdapter, adapterId = 'ollama-local'
     agent: LANE_BINDINGS.synthesis,
     after: LANES.map((lane) => lane.id),
     includeDependencies: true,
-    prompt: 'Integrate the four lane notes. Output no more than 35 words: interfaces, acceptance checks, and next step. Label unverified claims.'
+    prompt: 'Integrate the four lane notes. One sentence, maximum 30 words. State the next test and label unverified claims.'
   });
 
   const handlers = {};
@@ -92,7 +91,7 @@ async function runUnifiedField({ goal, invokeAdapter, adapterId = 'ollama-local'
       if (stage.includeDependencies) {
         const compactDependencies = Object.entries(dependencies).map(([key, value]) => JSON.stringify({
           lane: key,
-          response: String(value && value.response || '').slice(0, 100),
+          response: String(value && value.response || '').slice(0, 90),
           finishReason: value && value.finishReason || 'unknown'
         }));
         prompt += '\nLane notes (length means incomplete):\n' + compactDependencies.join('\n');
