@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+from scipy.integrate import trapezoid
 from scipy.linalg import eigh
 from scipy.stats import t as student_t
 
@@ -105,7 +106,7 @@ for disorder in DISORDER_LEVELS:
                 "disorder_level": disorder, "replicate": rep, "seed": seed, "arm": arm,
                 "peak_probability": float(probs[peak_idx]),
                 "peak_time": float(TIMES[peak_idx]),
-                "time_average_probability": float(np.trapz(probs, TIMES) / (TIMES[-1] - TIMES[0])),
+                "time_average_probability": float(trapezoid(probs, TIMES) / (TIMES[-1] - TIMES[0])),
                 "spectral_bandwidth": float(eigvals[-1] - eigvals[0]),
                 "max_norm_error": max_norm_err,
                 "hermiticity_error": herm_err,
