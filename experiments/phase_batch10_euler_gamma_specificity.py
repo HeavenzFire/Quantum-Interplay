@@ -7,6 +7,7 @@ gyroid-inspired hopping profile. It does not test a physical law.
 import csv, hashlib, json, math, platform, sys, time
 from pathlib import Path
 import numpy as np
+from scipy.integrate import trapezoid
 from scipy.linalg import eigh
 from scipy.stats import t as student_t
 
@@ -53,7 +54,7 @@ def simulate(weights):
             probs.append(float(abs(psi[dst])**2))
         probs=np.asarray(probs)
         result[f"{src}->{dst}"]={"peak_probability":float(np.max(probs)),
-            "time_average_probability":float(np.trapezoid(probs,TIMES)/(TIMES[-1]-TIMES[0]))}
+            "time_average_probability":float(trapezoid(probs,TIMES)/(TIMES[-1]-TIMES[0]))}
     return result,herm,norm,float(np.min(weights))
 
 started=time.time(); rows=[]; checks=[]
