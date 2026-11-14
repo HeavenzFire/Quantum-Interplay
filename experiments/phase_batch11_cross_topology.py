@@ -81,15 +81,12 @@ def build_body_centered_cubic():
                         for dz in (0, -1):
                             cx, cy, cz = x + dx, y + dy, z + dz
                             j = CELL_COUNT + idx(cx, cy, cz)
-                            bpos = (
-                                (cx + 0.5) % N,
-                                (cy + 0.5) % N,
-                                (cz + 0.5) % N,
-                            )
+                            # Use unwrapped coordinates before periodic reduction so
+                            # edges crossing a cell boundary get the correct midpoint.
                             midpoint = (
-                                ((x + bpos[0]) / 2.0) % N,
-                                ((y + bpos[1]) / 2.0) % N,
-                                ((z + bpos[2]) / 2.0) % N,
+                                (x + 0.5 * dx + 0.25) % N,
+                                (y + 0.5 * dy + 0.25) % N,
+                                (z + 0.5 * dz + 0.25) % N,
                             )
                             profile = gyroid(*(v / N for v in midpoint))
                             edges.append((i, j, profile))
